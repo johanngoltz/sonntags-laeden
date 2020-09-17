@@ -1,0 +1,4 @@
+---
+applications:
+- name: sonntags-discounter
+  memory: 64M
