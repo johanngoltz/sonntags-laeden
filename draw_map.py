@@ -2,8 +2,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly
 import pandas as pd
+import sys
 
-accesstoken = "pk.eyJ1Ijoiam9oYW5uZ29sdHoiLCJhIjoiY2tjbWFiaHRsMjBzcjJycXFuM3pseDEybSJ9.8MIAWvV1iG11vsGgLpmJsA"
+accesstoken = open(sys.argv[1]).read()
 
 df = pd.read_json("Filialen.json")
 
@@ -21,7 +22,7 @@ fig.update_traces({
 })
 fig.update_layout(autosize=True, legend=dict(xanchor="left", yanchor="top", y=1, x=0))
 
-fig.show(config={"locale": "de-DE"})
+# fig.show(config={"locale": "de-DE"})
 fig.write_html("index.html")
 
 fig.update_layout(title={"text": ""}, margin={"l": 10, "r": 10, "b": 10, "t": 10})
