@@ -1,4 +1,5 @@
 ---
 applications:
-- name: sonntags-discounter
+- name: sonntags-laeden
   memory: 64M
+  disk_quota: 128M
