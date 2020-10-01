@@ -44,15 +44,20 @@
 			'hours'=($_.openingHours | Select-String 'So.*').Matches.Value
 }}},
 # Lidl
-{0..12 | Foreach-Object -Parallel { (Invoke-RestMethod "https://spatial.virtualearth.net/REST/v1/data/ab055fcbaac04ec4bc563e65ffa07097/Filialdaten-SEC/Filialdaten-SEC?`$select=OpeningTimes,Longitude,Latitude&`$top=250&`$skip=$($_*250)&key=AhObtseK_QSskoiSo2QqaVzh5se-wCDhrrqooMRK9ddaBRVnWkLSlmUg7L7bF_vW&`$format=json&spatialFilter=nearby(51.9,10.3,1000)").d.results } | 
-		Where-Object OpeningTimes -notmatch 'So closed' | 
-		ForEach-Object { @{ 
-			'chain'='Lidl'; 
-			'label'='Lidl'; 
-			'lat'=$_.Latitude; 
-			'lon'=$_.Longitude; 
-			'hours'=($_.OpeningTimes | Select-String 'So[^<]+').Matches.Value
-}}},
+{
+	$token = (Invoke-RestMethod 'https://www.lidl.de/de/asset/other/storeFinder.js' |
+		Select-String 'DATA_SOURCE_QUERY_KEY:{DE:"(.*?)"').Matches.Groups[1].Value
+	$sessionId = (Invoke-RestMethod "https://dev.virtualearth.net/webservices/v1/LoggingService/LoggingService.svc/Log?entry=0&fmt=1&type=3&group=MapControl&auth=$token").sessionId
+	0..12 | Foreach-Object { (Invoke-RestMethod "https://spatial.virtualearth.net/REST/v1/data/ab055fcbaac04ec4bc563e65ffa07097/Filialdaten-SEC/Filialdaten-SEC?`$select=OpeningTimes,Longitude,Latitude&`$top=250&`$skip=$($_*250)&key=$sessionId&`$format=json&spatialFilter=nearby(51.9,10.3,1000)").d.results } |
+			Where-Object OpeningTimes -notmatch 'So closed' |
+			ForEach-Object { @{
+				'chain'='Lidl';
+				'label'='Lidl';
+				'lat'=$_.Latitude;
+				'lon'=$_.Longitude;
+				'hours'=($_.OpeningTimes | Select-String 'So[^<]+').Matches.Value
+		}}
+},
 # Edeka
 {
 	$href = '/api/marketsearch/markets?size=1000'; 
