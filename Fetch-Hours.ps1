@@ -101,5 +101,4 @@
 Foreach-Object { Start-Job $_ } |
 Foreach-Object -Parallel { Receive-Job $_ -Wait } |
 Sort-Object chain |
-%{[pscustomobject]$_} | 
-ConvertTo-Json > .\Filialen.json
+%{[pscustomobject]$_}
