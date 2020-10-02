@@ -88,14 +88,17 @@
 				"page"=$_
 				"pageSize"=500
 			}).markets } |
-		Where-Object openOnSunday | 
-		Foreach-Object { @{ 
-			'chain'='Rewe'; 
-			'label'=$_.headline; 
-			'lat'=$_.geolocation.latitude; 
-			'lon'=$_.geolocation.longitude; 
-			'hours'="$($_.openingHours.condensed.days) $($_.openingHours.condensed.hours)" 
-}}},
+		Where-Object { $days = $_.openingHours.condensed.days; $days -and $days.Contains('So') } |
+		Foreach-Object {
+			$sundayOpening = $_.openingHours.condensed | Where-Object { $_.days.Contains('So') }
+			@{
+				'chain'='Rewe'
+				'label'=$_.headline
+				'lat'=$_.geolocation.latitude
+				'lon'=$_.geolocation.longitude
+				'hours'="$($sundayOpening.days) $($sundayOpening.hours)"
+			}
+}},
 # Hit Ulrich
 {@(@{'chain'='Hit'; 'label'='Hit Berlin Zoo'; 'lat'=52.506395; 'lon'=13.331433; 'hours'='Sonntag: 09:00 – 22:00'})} | 
 Foreach-Object { Start-Job $_ } |
