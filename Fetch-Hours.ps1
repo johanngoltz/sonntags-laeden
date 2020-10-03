@@ -1,3 +1,33 @@
+Function Get-BüntingSundayMarkets {
+	[CmdletBinding()]
+	param(
+		[Parameter(Mandatory=$true)][string] $Chain,
+		[Parameter(Mandatory=$true)][uri] $BaseUri
+	)
+
+	$markets = Invoke-RestMethod -Uri ([Uri]::New($BaseUri, '/wp-json/wp/v2/wqwarenhaus?per_page=100'))
+	$marketgeodata = $coords |
+		ForEach-Object {
+			Invoke-RestMethod -Uri ([Uri]::New($BaseUri, "/wp-admin/admin-ajax.php?action=store_search&lat=$($_.lat)&lng=$($_.lon)&max_results=50&search_radius=100"))
+		} | ForEach-Object { $_ }
+	$markets | ForEach-Object -Parallel {
+		$uri = $_.link
+		$marketpage = Invoke-RestMethod $uri
+		$sundayOpeningHours = ($marketpage | Select-String 'Sonntag<\/strong><br>(([^<])*)').Matches.Groups
+		if ($sundayOpeningHours) {
+			$latlon = $using:marketgeodata | Where-Object url -eq $uri | Select-Object -First 1
+			@{
+				 'chain'=$using:Chain
+				 'label'=$using:Chain + ' ' + $_.title.rendered
+				 'lat'=$latlon.lat
+				 'lon'=$latlon.lng
+				 'Hours'="Sonntag $($sundayOpeningHours[1].Value)"
+			 }
+		}
+	}
+}
+
+
 # Netto MD
 {((Invoke-RestMethod -Uri 'https://www.netto-online.de/INTERSHOP/web/WFS/Plus-NettoDE-Site/de_DE/-/EUR/ViewNettoStoreFinder-GetStoreItems' -Method 'POST' -Body 's=45&n=55&w=5&e=15') | 
 		Where-Object store_opening -notlike '*geschlossen*') | 
@@ -101,26 +131,7 @@
 }},
 # Famila
 {
-	$markets = Invoke-RestMethod 'https://www.famila-nordost.de/wp-json/wp/v2/wqwarenhaus?per_page=100'
-	$marketgeodata = $coords |
-		ForEach-Object {
-			Invoke-RestMethod "https://www.famila-nordost.de/wp-admin/admin-ajax.php?action=store_search&lat=$($_.lat)&lng=$($_.lon)&max_results=50&search_radius=100"
-		} | ForEach-Object { $_ }
-	$markets | ForEach-Object -Parallel {
-		$uri = $_.link
-		$marketpage = Invoke-RestMethod $uri
-		$sundayOpeningHours = ($marketpage | Select-String 'Sonntag<\/strong><br>(([^<])*)').Matches.Groups
-		if ($sundayOpeningHours) {
-			$latlon = $using:marketgeodata | Where-Object url -eq $uri | Select-Object -First 1
-			@{
-				 'chain'='Famila'
-				 'label'=$_.title.rendered
-				 'lat'=$latlon.lat
-				 'lon'=$latlon.lng
-				 'Hours'="Sonntag $($sundayOpeningHours[1].Value)"
-			 }
-		}
-	}
+	Get-BüntingSundayMarkets -Chain 'Famila' -BaseUri 'https://www.famila-nordost.de/'
 },
 # Hit Ulrich
 {@(@{'chain'='Hit'; 'label'='Hit Berlin Zoo'; 'lat'=52.506395; 'lon'=13.331433; 'hours'='Sonntag: 09:00 – 22:00'})} | 
