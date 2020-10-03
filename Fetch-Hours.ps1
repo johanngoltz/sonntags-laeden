@@ -99,6 +99,29 @@
 				'hours'="$($sundayOpening.days) $($sundayOpening.hours)"
 			}
 }},
+# Famila
+{
+	$markets = Invoke-RestMethod 'https://www.famila-nordost.de/wp-json/wp/v2/wqwarenhaus?per_page=100'
+	$marketgeodata = $coords |
+		ForEach-Object {
+			Invoke-RestMethod "https://www.famila-nordost.de/wp-admin/admin-ajax.php?action=store_search&lat=$($_.lat)&lng=$($_.lon)&max_results=50&search_radius=100"
+		} | ForEach-Object { $_ }
+	$markets | ForEach-Object -Parallel {
+		$uri = $_.link
+		$marketpage = Invoke-RestMethod $uri
+		$sundayOpeningHours = ($marketpage | Select-String 'Sonntag<\/strong><br>(([^<])*)').Matches.Groups
+		if ($sundayOpeningHours) {
+			$latlon = $using:marketgeodata | Where-Object url -eq $uri | Select-Object -First 1
+			@{
+				 'chain'='Famila'
+				 'label'=$_.title.rendered
+				 'lat'=$latlon.lat
+				 'lon'=$latlon.lng
+				 'Hours'="Sonntag $($sundayOpeningHours[1].Value)"
+			 }
+		}
+	}
+},
 # Hit Ulrich
 {@(@{'chain'='Hit'; 'label'='Hit Berlin Zoo'; 'lat'=52.506395; 'lon'=13.331433; 'hours'='Sonntag: 09:00 – 22:00'})} | 
 Foreach-Object { Start-Job $_ } |
