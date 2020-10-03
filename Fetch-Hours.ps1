@@ -2,20 +2,23 @@ Function Get-BüntingSundayMarkets {
 	[CmdletBinding()]
 	param(
 		[Parameter(Mandatory=$true)][string] $Chain,
-		[Parameter(Mandatory=$true)][uri] $BaseUri
+		[Parameter(Mandatory=$true)][uri] $BaseUri,
+		[uri] $StoreUri
 	)
 
-	$markets = Invoke-RestMethod -Uri ([Uri]::New($BaseUri, '/wp-json/wp/v2/wqwarenhaus?per_page=100'))
+	$coords = @{'lat'=54.10183; 'lon'=13.0715}, @{'lat'=53.57478; 'lon'=9.96662}, @{'lat'=54.59672; 'lon'=9.57515}
+
+	$markets = Invoke-RestMethod ([Uri]::New($BaseUri,  $StoreUri, $False).ToString() + '?per_page=100')
 	$marketgeodata = $coords |
 		ForEach-Object {
-			Invoke-RestMethod -Uri ([Uri]::New($BaseUri, "/wp-admin/admin-ajax.php?action=store_search&lat=$($_.lat)&lng=$($_.lon)&max_results=50&search_radius=100"))
+			Invoke-RestMethod -Uri ([Uri]::New($BaseUri, "/wp-admin/admin-ajax.php?action=store_search&lat=$($_.lat)&lng=$($_.lon)&max_results=50&search_radius=100", $False))
 		} | ForEach-Object { $_ }
 	$markets | ForEach-Object -Parallel {
 		$uri = $_.link
 		$marketpage = Invoke-RestMethod $uri
 		$sundayOpeningHours = ($marketpage | Select-String 'Sonntag<\/strong><br>(([^<])*)').Matches.Groups
 		if ($sundayOpeningHours) {
-			$latlon = $using:marketgeodata | Where-Object url -eq $uri | Select-Object -First 1
+			$latlon = $using:marketgeodata | Where-Object url -like ($uri.Substring(0, $uri.Length - 1) + '*')  | Select-Object -First 1
 			@{
 				 'chain'=$using:Chain
 				 'label'=$using:Chain + ' ' + $_.title.rendered
@@ -131,8 +134,12 @@ Function Get-BüntingSundayMarkets {
 }},
 # Famila
 {
-	Get-BüntingSundayMarkets -Chain 'Famila' -BaseUri 'https://www.famila-nordost.de/'
+	Get-BüntingSundayMarkets -Chain 'Famila' -BaseUri 'https://www.famila-nordost.de' -StoreUri '/wp-json/wp/v2/wqwarenhaus'
 },
+# Markant
+{
+	Get-BüntingSundayMarkets -Chain 'Markant' -BaseUri 'https://www.markant-online.de' -StoreUri '/wp-json/wp/v2/markt'
+}
 # Hit Ulrich
 {@(@{'chain'='Hit'; 'label'='Hit Berlin Zoo'; 'lat'=52.506395; 'lon'=13.331433; 'hours'='Sonntag: 09:00 – 22:00'})} | 
 Foreach-Object { Start-Job $_ } |
